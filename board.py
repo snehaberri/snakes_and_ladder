@@ -1,7 +1,6 @@
 import pygame
 import sys
 
-# Colors
 BLACK = (200, 200, 200)
 BACKGROUND = (16, 75, 30)
 
@@ -14,7 +13,7 @@ def draw_grid(surface):
     for x in range(0, WINDOW_WIDTH, BLOCK_SIZE):
         for y in range(0, WINDOW_HEIGHT, BLOCK_SIZE):
             rect = pygame.Rect(x, y, BLOCK_SIZE, BLOCK_SIZE)
-            pygame.draw.rect(surface, BACKGROUND, rect, 1)
+            pygame.draw.rect(surface, BLACK, rect, 1)
 
 def main():
     pygame.init()
@@ -27,7 +26,7 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        screen.fill(BLACK)
+        screen.fill(BACKGROUND)
         draw_grid(screen)
         pygame.display.update()
         clock.tick(60)
