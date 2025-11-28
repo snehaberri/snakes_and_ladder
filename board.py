@@ -3,7 +3,7 @@ import sys
 
 # Colors
 BLACK = (200, 200, 200)
-WHITE = (0, 0, 0)
+BACKGROUND = (16, 75, 30)
 
 # Dimensions
 WINDOW_HEIGHT = 400
@@ -14,7 +14,7 @@ def draw_grid(surface):
     for x in range(0, WINDOW_WIDTH, BLOCK_SIZE):
         for y in range(0, WINDOW_HEIGHT, BLOCK_SIZE):
             rect = pygame.Rect(x, y, BLOCK_SIZE, BLOCK_SIZE)
-            pygame.draw.rect(surface, WHITE, rect, 1)
+            pygame.draw.rect(surface, BACKGROUND, rect, 1)
 
 def main():
     pygame.init()

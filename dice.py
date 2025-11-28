@@ -1,8 +1,9 @@
-import tkinter as tk
-from PIL import ImageTk, Image
-import itertools
+import pygame 
 import random
+import math
 
-root= tk.tk()
-root.geomtry("960*720")
-root.mainloop()
+pygame.init()
+WIDTH, HEIGHT= 500,400
+screen= pygame.display.set_mode((WIDTH, HEIGHT))
+clock= pygame.time.Clock()
+
