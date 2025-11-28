@@ -11,7 +11,7 @@ dice_imgs=[]
 use_imgs= False
 try:
     for i in range(1,7):
-        img= pygame.image.load(f"{i}.png").convert_alpha()
+        img= pygame.image.load(f"assets/dice/{i}.png").convert_alpha()
         dice_imgs.append(img)
     use_imgs= True
 except:
