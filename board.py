@@ -5,8 +5,8 @@ BLACK = (200, 200, 200)
 BACKGROUND = (16, 75, 30)
 
 # Dimensions
-WINDOW_HEIGHT = 400
-WINDOW_WIDTH = 400
+WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 600
 BLOCK_SIZE = 40  # size of each grid cell
 
 def draw_grid(surface):
