@@ -6,8 +6,8 @@ def board():
     BACKGROUND = (16, 75, 30)
 
     # Dimensions
-    WINDOW_HEIGHT = 600
-    WINDOW_WIDTH = 600
+    WINDOW_HEIGHT = 900
+    WINDOW_WIDTH = 900
     BLOCK_SIZE = 40  # size of each grid cell
 
     def draw_grid(surface):
