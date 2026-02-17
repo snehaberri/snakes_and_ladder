@@ -4,11 +4,11 @@ import random
 
 def tic_tac_toe():
     WIDTH, HEIGHT = 600, 600
-    LINE_COLOR = (23, 145, 135)
-    BG_COLOR = (28, 170, 156)
-    X_COLOR = (84, 84, 84)
-    O_COLOR = (242, 235, 211)
-    LINE_WIDTH = 10
+    LINE_COLOR = "#ffb3b3"
+    BG_COLOR = "#4d0000"
+    X_COLOR = "#aeb9ff"
+    O_COLOR = "#ffcce5"
+    LINE_WIDTH = 5
     CROSS_WIDTH = 15
     CIRCLE_WIDTH = 15
     CELL_SIZE = WIDTH // 3
@@ -181,3 +181,7 @@ def tic_tac_toe():
         
         pygame.display.update()
         clock.tick(60)
+
+
+if __name__ == "__main__":
+    tic_tac_toe()
