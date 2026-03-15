@@ -1,89 +1,90 @@
-import pygame
+import json
 import random
 import time
-import sys
+from pathlib import Path
 
-def reaction_time():
+import pygame
+
+
+def _save_state(state, save_path):
+    if not save_path:
+        return
+    path = Path(save_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
+def reaction_time(save_path="data/reaction_state.json"):
     pygame.init()
 
-    WIDTH, HEIGHT = 600, 400
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    width, height = 600, 400
+    screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Reaction Speed Test")
 
-    RED = (200, 0, 0)
-    GREEN = (0, 200, 0)
-    BLACK = (0, 0, 0)
-    WHITE = (255, 255, 255)
+    red = (200, 0, 0)
+    green = (0, 200, 0)
+    black = (0, 0, 0)
+    white = (255, 255, 255)
 
-    # Font
     font = pygame.font.Font(None, 48)
-    small_font = pygame.font.Font(None, 32)
-
     clock = pygame.time.Clock()
 
-    def draw_text(text, font, color, y):
+    def draw_text(text, color, y):
         rendered = font.render(text, True, color)
-        rect = rendered.get_rect(center=(WIDTH // 2, y))
+        rect = rendered.get_rect(center=(width // 2, y))
         screen.blit(rendered, rect)
 
-    def reaction_test():
-        waiting = True
-        ready = False
-        start_time = 0
+    wait_time = random.uniform(2, 5)
+    wait_start = time.time()
+    ready = False
+    start_time = None
 
-        # Random wait (2–5 seconds)
-        wait_time = random.uniform(2, 5)
-        wait_start = time.time()
+    while True:
+        screen.fill(red if not ready else green)
+        draw_text("Wait for GREEN..." if not ready else "CLICK!", white if not ready else black, height // 2)
 
-        running = True
-        while running:
-            screen.fill(RED)
-            draw_text("Wait for GREEN...", font, WHITE, HEIGHT // 2)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                state = {
+                    "mini_game": "reaction_time",
+                    "result": "quit",
+                    "reaction_ms": None,
+                    "wait_time_s": round(wait_time, 3),
+                    "completed_at": int(time.time()),
+                }
+                _save_state(state, save_path)
+                return state
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if not ready:
+                    state = {
+                        "mini_game": "reaction_time",
+                        "result": "too_soon",
+                        "reaction_ms": None,
+                        "wait_time_s": round(wait_time, 3),
+                        "completed_at": int(time.time()),
+                    }
+                    _save_state(state, save_path)
+                    return state
 
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if ready:
-                        reaction_time = int((time.time() - start_time) * 1000)
-                        result_screen(reaction_time)
-                        return
-                    else:
-                        # Clicked too early
-                        result_screen(None)
-                        return
+                reaction_ms = int((time.time() - start_time) * 1000)
+                state = {
+                    "mini_game": "reaction_time",
+                    "result": "clicked",
+                    "reaction_ms": reaction_ms,
+                    "wait_time_s": round(wait_time, 3),
+                    "completed_at": int(time.time()),
+                }
+                _save_state(state, save_path)
+                return state
 
-            # Switch to green after delay
-            if waiting and time.time() - wait_start >= wait_time:
-                waiting = False
-                ready = True
-                start_time = time.time()
+        if not ready and (time.time() - wait_start) >= wait_time:
+            ready = True
+            start_time = time.time()
 
-            if ready:
-                screen.fill(GREEN)
-                draw_text("CLICK!", font, BLACK, HEIGHT // 2)
+        pygame.display.update()
+        clock.tick(60)
 
-            pygame.display.update()
-            clock.tick(60)
 
-    def result_screen(reaction_time):
-        showing = True
-        while showing:
-            screen.fill(BLACK)
-
-            if reaction_time is None:
-                draw_text("Too Soon!", font, RED, HEIGHT // 2 - 20)
-            else:
-                draw_text(f"{reaction_time} ms", font, GREEN, HEIGHT // 2 - 20)
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    showing = False
-
-            pygame.display.update()
-            clock.tick(60)
+if __name__ == "__main__":
+    print(reaction_time())

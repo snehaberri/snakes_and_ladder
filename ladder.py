@@ -1,5 +1,5 @@
 import random
-
+from assets import ladder_snakes
 class ladder:
     def __init__(self):
         self.ladders ={}
@@ -35,5 +35,3 @@ class ladder:
         return self.ladders
     def check_ladder(self,tile):
         return self.ladders.get(tile)
-            
-        
