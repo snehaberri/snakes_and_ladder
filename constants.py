@@ -1,54 +1,82 @@
-# constants.py — shared config for game logic AND renderer
-# No pygame import here so the bot can use this headless.
 
-GRID_SIZE  = 10
-CELL_SIZE  = 70
-MARGIN     = 30
-BOARD_SIZE = GRID_SIZE * CELL_SIZE   # 700
-PANEL_W    = 260
-WIN_W      = MARGIN + BOARD_SIZE + MARGIN + PANEL_W
-WIN_H      = MARGIN + BOARD_SIZE + MARGIN
+# constants.py — shared config for the Snakes & Ladders game.
+# Nothing here draws or plays anything; it's just numbers and colours
+# that board.py and main.py both need.
 
-FPS        = 60
-ANIM_SPEED = 4   # cells per second during movement animation
+# ── Board geometry ──────────────────────────────────────────────────────────
+GRID_SIZE  = 10                        # 10x10 board
+CELL_SIZE  = 70                        # pixels per cell
+MARGIN     = 40                        # space around the board for edge labels
+BOARD_SIZE = GRID_SIZE * CELL_SIZE     # 700 — total board width/height (no margin)
 
-# ── Board layout ──────────────────────────────────────────────────────────────
-# Keys = tile that triggers the event, Values = destination
-LADDERS: dict[int, int] = {
-     4: 14,
-     9: 31,
-    20: 38,
-    28: 84,
-    40: 59,
-    51: 67,
-    63: 81,
-    71: 91,
-}
+BOARD_AREA = BOARD_SIZE + 2 * MARGIN   # 780 — full board incl. margins on both sides
+PANEL_WIDTH = 260                      # side panel: dice, turn, messages
 
-SNAKES: dict[int, int] = {
-    17:  7,
-    54: 34,
+WINDOW_WIDTH  = BOARD_AREA + PANEL_WIDTH
+WINDOW_HEIGHT = BOARD_AREA
+FPS = 60
+
+# ── Colours ──────────────────────────────────────────────────────────────
+BACKGROUND  = (16, 75, 30)
+GRID_COL    = (60, 60, 60)
+CELL_LIGHT  = (240, 240, 214)
+CELL_DARK   = (206, 204, 168)
+SNAKE_COL   = (200, 60, 60)
+LADDER_COL  = (60, 140, 70)
+PANEL_BG    = (24, 90, 40)
+TEXT_COL    = (255, 255, 255)
+BUTTON_COL  = (230, 180, 40)
+BUTTON_HOVER = (245, 200, 70)
+BUTTON_TEXT = (30, 30, 30)
+
+PLAYER_COLORS = [
+    (220, 50, 50),   # red
+    (50, 100, 220),  # blue
+    (240, 200, 40),  # yellow
+    (140, 70, 210),  # purple
+]
+
+# ── Snakes and ladders ──────────────────────────────────────────────────
+# key = start cell (head / bottom of ladder), value = end cell (tail / top)
+SNAKES = {
+    16: 6,
+    47: 26,
+    49: 11,
+    56: 53,
     62: 19,
     64: 60,
     87: 24,
-    93: 73,
-    95: 75,
-    99: 78,
+    72: 50,
+    95: 86,
+    99: 77,
+}
+tic_tac_toe = {}
+LADDERS = {
+    7: 38,
+    9: 31,
+    21: 42,
+    28: 65,
+    36: 44,
+    43: 60,
+    51: 67,
+    71: 91,
+    80: 100,
 }
 
-# ── Colours (only needed by renderer/board.py) ────────────────────────────────
-BG         = (245, 240, 230)
-GRID_COL   = ( 90,  76,  58)
-CELL_LIGHT = (255, 248, 235)
-CELL_DARK  = (230, 210, 175)
-SNAKE_COL  = (190,  40,  40)
-LADDER_COL = ( 40, 150,  60)
-P1_COL     = ( 70, 130, 210)
-P2_COL     = (210,  80,  80)
-TEXT_DARK  = ( 50,  42,  30)
-TEXT_LIGHT = (255, 255, 255)
-PANEL_BG   = (235, 228, 212)
-BTN_COL    = ( 80,  65,  45)
-BTN_HOV    = (110,  90,  60)
-BTN_TXT    = (255, 248, 235)
-HIGHLIGHT  = (255, 215,   0)
+# Five coloured mini-game squares: purple is tic-tac-toe; cyan is reaction.
+CHALLENGE_SQUARES = {13: "tic_tac_toe",
+                    22: "tic_tac_toe", 
+                    30: "reaction_time",
+                    30: "reaction_time", 
+                    45: "tic_tac_toe", 
+                    68: "reaction_time", 
+                    86: "tic_tac_toe", 
+                    19: "reaction_time",
+                    60: "tic_tac_toe",
+                    5: "reaction_time",
+                    78: "tic_tac_toe",
+                    97: "tic_tac_toe"
+                    }
+
+TIC_TAC_TOE_COL = (155, 95, 210)
+REACTION_COL = (35, 180, 205)

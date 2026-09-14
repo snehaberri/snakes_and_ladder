@@ -1,37 +1,3 @@
-# import pygame
-# import sys
-
-# def board():
-#     BLACK = (200, 200, 200)
-#     BACKGROUND = (16, 75, 30)
-
-#     # Dimensions
-#     WINDOW_HEIGHT = 900
-#     WINDOW_WIDTH = 900
-#     BLOCK_SIZE = 40  # size of each grid cell
-
-#     def draw_grid(surface):
-#         for x in range(0, WINDOW_WIDTH, BLOCK_SIZE):
-#             for y in range(0, WINDOW_HEIGHT, BLOCK_SIZE):
-#                 rect = pygame.Rect(x, y, BLOCK_SIZE, BLOCK_SIZE)
-#                 pygame.draw.rect(surface, BLACK, rect, 1)
-
-#     def main():
-#         pygame.init()
-#         screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-#         clock = pygame.time.Clock()
-
-#         while True:
-#             for event in pygame.event.get():
-#                 if event.type == pygame.QUIT:
-#                     pygame.quit()
-#                     sys.exit()
-
-#             screen.fill(BACKGROUND)
-#             draw_grid(screen)
-#             pygame.display.update()
-#             clock.tick(60)
-
 # board.py — pygame rendering for the 10×10 board, snakes, and ladders.
 # Pure drawing: no game state, no logic.
 
@@ -41,7 +7,7 @@ from constants import (
     GRID_SIZE, CELL_SIZE, MARGIN, BOARD_SIZE,
     GRID_COL, CELL_LIGHT, CELL_DARK,
     SNAKE_COL, LADDER_COL,
-    SNAKES, LADDERS,
+    SNAKES, LADDERS, CHALLENGE_SQUARES, TIC_TAC_TOE_COL, REACTION_COL,
 )
 
 
@@ -86,9 +52,16 @@ def draw_board(surface: pygame.Surface, font_small: pygame.font.Font) -> None:
             pygame.draw.rect(surface, (200, 240, 200),
                              (rx+2, ry+2, CELL_SIZE-4, CELL_SIZE-4),
                              border_radius=6)
+        elif cell in CHALLENGE_SQUARES:
+            tint = (232, 218, 248) if CHALLENGE_SQUARES[cell] == "tic_tac_toe" else (205, 240, 243)
+            pygame.draw.rect(surface, tint, (rx+2, ry+2, CELL_SIZE-4, CELL_SIZE-4), border_radius=6)
 
         num = font_small.render(str(cell), True, GRID_COL)
         surface.blit(num, (rx + 4, ry + 4))
+        if cell in CHALLENGE_SQUARES:
+            colour = TIC_TAC_TOE_COL if CHALLENGE_SQUARES[cell] == "tic_tac_toe" else REACTION_COL
+            pygame.draw.circle(surface, colour, (rx + CELL_SIZE - 12, ry + CELL_SIZE - 12), 8)
+            pygame.draw.circle(surface, GRID_COL, (rx + CELL_SIZE - 12, ry + CELL_SIZE - 12), 8, 1)
 
     # Grid lines on top
     for i in range(GRID_SIZE + 1):
@@ -100,9 +73,9 @@ def draw_board(surface: pygame.Surface, font_small: pygame.font.Font) -> None:
                          (MARGIN + i * CELL_SIZE, MARGIN + BOARD_SIZE), 1)
 
 
-def draw_snakes(surface: pygame.Surface) -> None:
+def draw_snakes(surface: pygame.Surface, snakes=None) -> None:
     """Draw all snakes as wavy lines with a head circle and eye dots."""
-    for start, end in SNAKES.items():
+    for start, end in (SNAKES if snakes is None else snakes).items():
         x1, y1 = cell_to_pos(start)
         x2, y2 = cell_to_pos(end)
         _draw_wavy_line(surface, SNAKE_COL, x1, y1, x2, y2, width=6, waves=5)
@@ -122,9 +95,9 @@ def draw_snakes(surface: pygame.Surface) -> None:
         pygame.draw.circle(surface, SNAKE_COL, (x2, y2), 4)
 
 
-def draw_ladders(surface: pygame.Surface) -> None:
+def draw_ladders(surface: pygame.Surface, ladders=None) -> None:
     """Draw all ladders as two rails with evenly-spaced rungs."""
-    for start, end in LADDERS.items():
+    for start, end in (LADDERS if ladders is None else ladders).items():
         x1, y1 = cell_to_pos(start)
         x2, y2 = cell_to_pos(end)
         dx, dy = x2 - x1, y2 - y1
@@ -157,6 +130,25 @@ def draw_ladders(surface: pygame.Surface) -> None:
 # ── Internal helper ───────────────────────────────────────────────────────────
 
 def _draw_wavy_line(surf, color, x1, y1, x2, y2, width=4, waves=4):
+    steps  = waves * 8
+    dx, dy = x2 - x1, y2 - y1
+    length = math.hypot(dx, dy)
+    if length == 0:
+        return
+    ux, uy = dx / length, dy / length
+    px, py = -uy, ux
+    amp    = min(CELL_SIZE * 0.18, 10)
+
+    pts = []
+    for i in range(steps + 1):
+        t    = i / steps
+        cx   = x1 + t * dx
+        cy   = y1 + t * dy
+        wave = amp * math.sin(t * waves * 2 * math.pi)
+        pts.append((int(cx + wave * px), int(cy + wave * py)))
+
+    if len(pts) >= 2:
+        pygame.draw.lines(surf, color, False, pts, width)
     steps  = waves * 8
     dx, dy = x2 - x1, y2 - y1
     length = math.hypot(dx, dy)
