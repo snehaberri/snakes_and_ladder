@@ -65,3 +65,4 @@ def dice():
                 rolled_value = roll_dice_animation()   # run animation
 
     pygame.quit()
+dice()

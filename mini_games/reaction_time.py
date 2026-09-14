@@ -87,3 +87,5 @@ def reaction_time():
 
             pygame.display.update()
             clock.tick(60)
+            
+reaction_time()
