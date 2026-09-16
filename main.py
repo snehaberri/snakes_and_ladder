@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+import asyncio
 
 import pygame
 
@@ -299,7 +300,7 @@ def draw_reaction(screen, game, fonts):
     screen.blit(normal.render(message, True, TEXT_COL), normal.render(message, True, TEXT_COL).get_rect(center=(390, 390)))
 
 
-def main():
+async def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT)); pygame.display.set_caption("Solo Snakes & Ladders")
     clock = pygame.time.Clock(); fonts = (pygame.font.SysFont("arial", 26, bold=True), pygame.font.SysFont("arial", 20), pygame.font.SysFont("arial", 14))
@@ -325,7 +326,11 @@ def main():
         elif game.state in ("REACTION_WAIT", "REACTION_READY"): draw_reaction(screen, game, fonts)
         pygame.display.flip(); clock.tick(FPS); frames += 1
         if auto and (game.player.won or frames > 5000): running = False
+        pygame.display.flip(); frames += 1
+        if auto and (game.player.won or frames > 5000): running = False
+        clock.tick(FPS)
+        await asyncio.sleep(0)
     pygame.quit(); sys.exit()
 
 
-if __name__ == "__main__": main()
+asyncio.run(main())
