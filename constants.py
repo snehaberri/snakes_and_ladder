@@ -17,7 +17,7 @@ WINDOW_HEIGHT = BOARD_AREA
 FPS = 60
 
 # ── Colours ──────────────────────────────────────────────────────────────
-BACKGROUND  = (16, 75, 30)
+BACKGROUND  = "#FFFFFF"
 GRID_COL    = [
     "#ec2029",
     "#0976bb",
@@ -25,23 +25,18 @@ GRID_COL    = [
     "#fff5d2",
     "#d7e02c"]
 GRID_LINE_COL = (60, 60, 60)
-MINIGAME_CELL_COL = "#fff5d2"
+MINIGAME_CELL_COL = "#fff5f2"
 CELL_LIGHT  = (240, 240, 214)
 CELL_DARK   = (206, 204, 168)
-SNAKE_COL   = (200, 60, 60)
-LADDER_COL  = (60, 140, 70)
+SNAKE_COL   = "#7e3d3c"
+LADDER_COL  = "#000000"
 PANEL_BG    = (24, 90, 40)
 TEXT_COL    = (255, 255, 255)
 BUTTON_COL  = (230, 180, 40)
 BUTTON_HOVER = (245, 200, 70)
 BUTTON_TEXT = (30, 30, 30)
 
-PLAYER_COLORS = [
-    (220, 50, 50),   # red
-    (50, 100, 220),  # blue
-    (240, 200, 40),  # yellow
-    (140, 70, 210),  # purple
-]
+PLAYER_COLORS = (140, 70, 210),  # purple
 
 # ── Snakes and ladders ──────────────────────────────────────────────────
 # key = start cell (head / bottom of ladder), value = end cell (tail / top)
@@ -85,5 +80,5 @@ CHALLENGE_SQUARES = {13: "tic_tac_toe",
                     97: "tic_tac_toe"
                     }
 
-TIC_TAC_TOE_COL = (155, 95, 210)
-REACTION_COL = (35, 180, 205)
+TIC_TAC_TOE_COL = "#cb888b"
+REACTION_COL = "#889fcb"

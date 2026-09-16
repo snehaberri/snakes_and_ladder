@@ -63,16 +63,48 @@ def walk(cursor, game_id, turn, step, cell, destination, event, dice_value=None)
 
 
 def play_tic_tac_toe_bot() -> bool:
-    """The bot and opponent select open squares at random; True means bot won."""
+    """Play X as a minimax bot against a random O opponent."""
     cells, wins = [None] * 9, ((0, 1, 2), (3, 4, 5), (6, 7, 8),
                                 (0, 3, 6), (1, 4, 7), (2, 5, 8), (0, 4, 8), (2, 4, 6))
-    for mark in ("X", "O") * 5:
+    def winner(board):
+        for a, b, c in wins:
+            if board[a] and board[a] == board[b] == board[c]:
+                return board[a]
+        return None
+
+    def minimax(maximizing, depth):
+        result = winner(cells)
+        if result == "X":
+            return 10 - depth
+        if result == "O":
+            return depth - 10
+        open_cells = [index for index, value in enumerate(cells) if value is None]
+        if not open_cells:
+            return 0
+        scores = []
+        for index in open_cells:
+            cells[index] = "X" if maximizing else "O"
+            scores.append(minimax(not maximizing, depth + 1))
+            cells[index] = None
+        return max(scores) if maximizing else min(scores)
+
+    for turn in range(9):
         open_cells = [index for index, value in enumerate(cells) if value is None]
         if not open_cells:
             return False
-        cells[random.choice(open_cells)] = mark
-        if any(cells[a] == cells[b] == cells[c] == mark for a, b, c in wins):
-            return mark == "X"
+        if turn % 2 == 0:
+            best_cell, best_score = open_cells[0], float("-inf")
+            for index in open_cells:
+                cells[index] = "X"
+                score = minimax(False, 1)
+                cells[index] = None
+                if score > best_score:
+                    best_cell, best_score = index, score
+            cells[best_cell] = "X"
+        else:
+            cells[random.choice(open_cells)] = "O"
+        if winner(cells):
+            return winner(cells) == "X"
     return False
 
 

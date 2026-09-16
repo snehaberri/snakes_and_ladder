@@ -81,11 +81,37 @@ def tic_tac_toe():
         return [i for i, cell in enumerate(board) if cell is None]
     
     def bot_move(board):
-        """Simple bot AI - randomly chooses an empty cell"""
+        """Choose the strongest available move for O using minimax."""
+        def minimax(maximizing, depth):
+            winner = check_winner(board)
+            if winner == 'O':
+                return 10 - depth
+            if winner == 'X':
+                return depth - 10
+            empty = get_empty_cells(board)
+            if not empty:
+                return 0
+
+            scores = []
+            for cell in empty:
+                board[cell] = 'O' if maximizing else 'X'
+                scores.append(minimax(not maximizing, depth + 1))
+                board[cell] = None
+            return max(scores) if maximizing else min(scores)
+
         empty_cells = get_empty_cells(board)
-        if empty_cells:
-            return random.choice(empty_cells)
-        return None
+        if not empty_cells:
+            return None
+
+        best_cell = empty_cells[0]
+        best_score = float('-inf')
+        for cell in empty_cells:
+            board[cell] = 'O'
+            score = minimax(False, 1)
+            board[cell] = None
+            if score > best_score:
+                best_score, best_cell = score, cell
+        return best_cell
     
     def draw_text(text, font, color, y_offset=0):
         rendered = font.render(text, True, color)
@@ -181,7 +207,6 @@ def tic_tac_toe():
         
         pygame.display.update()
         clock.tick(60)
-
 
 if __name__ == "__main__":
     tic_tac_toe()

@@ -15,6 +15,8 @@ from constants import (
 
 MOVE_DELAY_MS = 160
 PAUSE_MS = 350
+ROLL_DURATION_MS = 700
+ROLL_FRAME_MS = 65
 
 
 class Player:
@@ -26,6 +28,9 @@ class Game:
     def __init__(self):
         self.player = Player()
         self.last_roll = None
+        self.pending_roll, self.roll_started_at, self.roll_seed = None, None, 0
+        self.roll_shift = None
+        self.activity = ["Game started — roll the dice."]
         self.message = "Roll the dice to start your adventure."
         self.state = "WAITING_ROLL"
         self._queue, self._timer = [], 0
@@ -42,14 +47,34 @@ class Game:
         if self.state != "WAITING_ROLL":
             return
         self.turns += 1
-        shift = self._direct_board()
-        self.last_roll = roll_dice()
+        self.roll_shift = self._direct_board()
+        self.pending_roll = roll_dice()
+        self.roll_started_at = pygame.time.get_ticks()
+        self.roll_seed = random.randrange(6)
+        self.state = "ROLLING"
+        self.message = "Rolling the dice..."
+
+    def _finish_roll(self):
+        self.last_roll = self.pending_roll
         target = self.player.cell + self.last_roll
         if target > 100:
-            self.message = f"{shift + ' ' if shift else ''}You rolled {self.last_roll}. You need an exact roll to reach 100."
+            self.message = f"{self.roll_shift + ' ' if self.roll_shift else ''}You rolled {self.last_roll}. You need an exact roll to reach 100."
+            self._add_activity(f"Rolled {self.last_roll}: exact roll needed.")
+            self.state = "WAITING_ROLL"
             self._timeout_check()
             return
-        self._start_move(target, f"{shift + ' ' if shift else ''}You rolled {self.last_roll}.")
+        self._add_activity(f"Rolled {self.last_roll}: moving to {target}.")
+        self._start_move(target, f"{self.roll_shift + ' ' if self.roll_shift else ''}You rolled {self.last_roll}.")
+
+    def die_face(self):
+        if self.state == "ROLLING":
+            elapsed = pygame.time.get_ticks() - self.roll_started_at
+            return (self.roll_seed + elapsed // ROLL_FRAME_MS) % 6 + 1
+        return self.last_roll
+
+    def _add_activity(self, event):
+        self.activity.insert(0, event)
+        self.activity = self.activity[:5]
 
     def _direct_board(self):
         if not self.director or not self.changes_left or (self.turns - 1) % DECISION_INTERVAL:
@@ -59,7 +84,9 @@ class Game:
         if description:
             self.changes_left -= 1
             log_decision(self.ai_goal, self.turns, self.player.cell, action, description)
+            self._add_activity(f"RL chose {action}: {description[3:]}")
             return description + "."
+        self._add_activity(f"RL chose {action}: board unchanged.")
         return None
 
     def _timeout_check(self):
@@ -76,7 +103,10 @@ class Game:
 
     def tick(self):
         now = pygame.time.get_ticks()
-        if self.state == "MOVING" and now - self._timer >= MOVE_DELAY_MS:
+        if self.state == "ROLLING":
+            if now - self.roll_started_at >= ROLL_DURATION_MS:
+                self._finish_roll()
+        elif self.state == "MOVING" and now - self._timer >= MOVE_DELAY_MS:
             if self._queue:
                 self.player.cell = self._queue.pop(0)
                 self._timer = now
@@ -89,21 +119,28 @@ class Game:
         p = self.player
         if p.cell >= 100:
             p.cell, p.won, self.state, self.message = 100, True, "GAME_OVER", "You reached 100 — you win!"
+            self._add_activity("You reached square 100 — you win!")
         elif check_square and p.cell in self.snakes:
+            start = p.cell
             p.cell, self.state, self._timer = self.snakes[p.cell], "PAUSE", pygame.time.get_ticks()
             self.message = f"A snake! Slide down to {p.cell}."
+            self._add_activity(f"Snake: {start} → {p.cell}.")
         elif check_square and p.cell in self.ladders:
+            start = p.cell
             p.cell, self.state, self._timer = self.ladders[p.cell], "PAUSE", pygame.time.get_ticks()
             self.message = f"A ladder! Climb up to {p.cell}."
+            self._add_activity(f"Ladder: {start} → {p.cell}.")
         elif check_square and p.cell in CHALLENGE_SQUARES:
             if CHALLENGE_SQUARES[p.cell] == "tic_tac_toe":
                 self.state, self.tic_board = "TIC_TAC_TOE", [None] * 9
                 self.message = "Tic-tac-toe: make three Xs to move +2; otherwise -1."
+                self._add_activity(f"Star tile {p.cell}: tic-tac-toe.")
             else:
                 self.state = "REACTION_WAIT"
                 self.reaction_started = pygame.time.get_ticks()
                 self.reaction_ready_at = self.reaction_started + random.randint(1200, 2600)
                 self.message = "Reaction test: wait for green, then click. Under 0.35 sec = +2; otherwise -1."
+                self._add_activity(f"Star tile {p.cell}: reaction test.")
         else:
             self.state, self.message = "WAITING_ROLL", "Roll the dice."
             self._timeout_check()
@@ -123,16 +160,52 @@ class Game:
         if None not in self.tic_board:
             self._challenge_result(False, "Tic-tac-toe draw. Move 1 step back.")
             return
-        empty = [i for i, mark in enumerate(self.tic_board) if mark is None]
-        self.tic_board[random.choice(empty)] = "O"
+        bot_cell = self._best_tic_move()
+        if bot_cell is not None:
+            self.tic_board[bot_cell] = "O"
         if self._winner() == "O" or None not in self.tic_board:
             self._challenge_result(False, "Tic-tac-toe lost or drawn. Move 1 step back.")
 
-    def _winner(self):
+    def _best_tic_move(self):
+        """Choose the strongest available move for O using minimax."""
+        def minimax(board, maximizing, depth):
+            winner = self._winner_for(board)
+            if winner == "O":
+                return 10 - depth
+            if winner == "X":
+                return depth - 10
+            empty = [i for i, mark in enumerate(board) if mark is None]
+            if not empty:
+                return 0
+
+            scores = []
+            for cell in empty:
+                board[cell] = "O" if maximizing else "X"
+                scores.append(minimax(board, not maximizing, depth + 1))
+                board[cell] = None
+            return max(scores) if maximizing else min(scores)
+
+        empty = [i for i, mark in enumerate(self.tic_board) if mark is None]
+        if not empty:
+            return None
+        best_score = float("-inf")
+        best_cell = empty[0]
+        for cell in empty:
+            self.tic_board[cell] = "O"
+            score = minimax(self.tic_board, False, 1)
+            self.tic_board[cell] = None
+            if score > best_score:
+                best_score, best_cell = score, cell
+        return best_cell
+
+    def _winner_for(self, board):
         for a, b, c in ((0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6)):
-            if self.tic_board[a] and self.tic_board[a] == self.tic_board[b] == self.tic_board[c]:
-                return self.tic_board[a]
+            if board[a] and board[a] == board[b] == board[c]:
+                return board[a]
         return None
+
+    def _winner(self):
+        return self._winner_for(self.tic_board)
 
     def reaction_click(self):
         if self.state not in ("REACTION_WAIT", "REACTION_READY"):
@@ -145,6 +218,7 @@ class Game:
             self._challenge_result(seconds < .35, f"Reaction: {seconds:.3f}s. " + ("Move 2 steps forward!" if seconds < .35 else "Move 1 step back."))
 
     def _challenge_result(self, won, message):
+        self._add_activity("Challenge won: +2 squares." if won else "Challenge lost: -1 square.")
         self._start_move(self.player.cell + (2 if won else -1), message)
 
     def reset(self):
@@ -168,21 +242,34 @@ def draw_panel(screen, game, fonts, button, mouse, dice_images):
     pygame.draw.circle(screen, game.player.color, (BOARD_AREA + 31, 95), 10)
     screen.blit(normal.render(f"Player: square {game.player.cell}", True, TEXT_COL), (BOARD_AREA + 50, 84))
     screen.blit(small.render("Dice", True, TEXT_COL), (BOARD_AREA + 20, 124))
-    if game.last_roll:
-        die = dice_images[game.last_roll - 1]
+    face = game.die_face()
+    if face:
+        die = dice_images[face - 1]
+        if game.state == "ROLLING":
+            elapsed = pygame.time.get_ticks() - game.roll_started_at
+            angle = 12 if (elapsed // ROLL_FRAME_MS) % 2 else -12
+            scale = 1.12 if (elapsed // (ROLL_FRAME_MS * 2)) % 2 else 0.96
+            die = pygame.transform.rotozoom(die, angle, scale)
         screen.blit(die, die.get_rect(center=(BOARD_AREA + 130, 188)))
     else:
         pygame.draw.rect(screen, (210, 210, 210), (BOARD_AREA + 90, 148, 80, 80), border_radius=10)
         screen.blit(normal.render("?", True, BUTTON_TEXT), normal.render("?", True, BUTTON_TEXT).get_rect(center=(BOARD_AREA + 130, 188)))
     screen.blit(small.render(f"Board AI: {game.ai_goal} ({game.changes_left} shifts)", True, TEXT_COL), (BOARD_AREA + 20, 245))
-    screen.blit(small.render("Purple: tic-tac-toe", True, TIC_TAC_TOE_COL), (BOARD_AREA + 20, 267))
-    screen.blit(small.render("Cyan: reaction test", True, REACTION_COL), (BOARD_AREA + 20, 289))
+    screen.blit(small.render("Pink: tic-tac-toe", True, TIC_TAC_TOE_COL), (BOARD_AREA + 20, 267))
+    screen.blit(small.render("Blue: reaction test", True, REACTION_COL), (BOARD_AREA + 20, 289))
     y = 325
     for line in wrap(game.message, small, screen.get_width() - BOARD_AREA - 38):
         screen.blit(small.render(line, True, TEXT_COL), (BOARD_AREA + 20, y)); y += 22
+    y = max(y + 10, 395)
+    screen.blit(small.render("Game activity", True, (255, 215, 0)), (BOARD_AREA + 20, y))
+    y += 22
+    for event in game.activity[:4]:
+        for line in wrap(f"• {event}", small, screen.get_width() - BOARD_AREA - 38):
+            screen.blit(small.render(line, True, TEXT_COL), (BOARD_AREA + 20, y)); y += 18
+        y += 4
     color = BUTTON_HOVER if button.collidepoint(mouse) else BUTTON_COL
     pygame.draw.rect(screen, color, button, border_radius=8)
-    label = "Play Again" if game.state == "GAME_OVER" else ("Roll Dice" if game.state == "WAITING_ROLL" else "Challenge in progress")
+    label = "Play Again" if game.state == "GAME_OVER" else ("Roll Dice" if game.state == "WAITING_ROLL" else ("Rolling..." if game.state == "ROLLING" else "Challenge in progress"))
     screen.blit(normal.render(label, True, BUTTON_TEXT), normal.render(label, True, BUTTON_TEXT).get_rect(center=button.center))
 
 
