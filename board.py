@@ -2,13 +2,19 @@
 # Pure drawing: no game state, no logic.
 
 import math
+import random
 import pygame
 from constants import (
     GRID_SIZE, CELL_SIZE, MARGIN, BOARD_SIZE,
-    GRID_COL, CELL_LIGHT, CELL_DARK,
+    GRID_COL, GRID_LINE_COL, MINIGAME_CELL_COL,
     SNAKE_COL, LADDER_COL,
     SNAKES, LADDERS, CHALLENGE_SQUARES, TIC_TAC_TOE_COL, REACTION_COL,
 )
+
+# Pick the palette placement once when the application starts.  Choosing a
+# colour while drawing would make cells change colour every frame.
+_palette = tuple(pygame.Color(colour) for colour in GRID_COL)
+_cell_colours = {cell: random.choice(_palette) for cell in range(1, 101)}
 
 
 def cell_to_pos(cell: int) -> tuple[int, int]:
@@ -29,8 +35,7 @@ def cell_to_pos(cell: int) -> tuple[int, int]:
 
 
 def draw_board(surface: pygame.Surface, font_small: pygame.font.Font) -> None:
-    """Draw tiled cells with alternating colours, special tints for snake/ladder
-    origin tiles, and cell numbers."""
+    """Draw colourful, randomly placed cell colours and board markers."""
     for cell in range(1, 101):
         idx        = cell - 1
         row        = idx // GRID_SIZE
@@ -41,8 +46,7 @@ def draw_board(surface: pygame.Surface, font_small: pygame.font.Font) -> None:
         rx = MARGIN + col * CELL_SIZE
         ry = MARGIN + screen_row * CELL_SIZE
 
-        tile_col = CELL_LIGHT if (row + col) % 2 == 0 else CELL_DARK
-        pygame.draw.rect(surface, tile_col, (rx, ry, CELL_SIZE, CELL_SIZE))
+        pygame.draw.rect(surface, _cell_colours[cell], (rx, ry, CELL_SIZE, CELL_SIZE))
 
         if cell in SNAKES:
             pygame.draw.rect(surface, (255, 200, 200),
@@ -53,22 +57,22 @@ def draw_board(surface: pygame.Surface, font_small: pygame.font.Font) -> None:
                              (rx+2, ry+2, CELL_SIZE-4, CELL_SIZE-4),
                              border_radius=6)
         elif cell in CHALLENGE_SQUARES:
-            tint = (232, 218, 248) if CHALLENGE_SQUARES[cell] == "tic_tac_toe" else (205, 240, 243)
-            pygame.draw.rect(surface, tint, (rx+2, ry+2, CELL_SIZE-4, CELL_SIZE-4), border_radius=6)
+            pygame.draw.rect(surface, MINIGAME_CELL_COL,
+                             (rx+2, ry+2, CELL_SIZE-4, CELL_SIZE-4), border_radius=6)
 
-        num = font_small.render(str(cell), True, GRID_COL)
+        num = font_small.render(str(cell), True, GRID_LINE_COL)
         surface.blit(num, (rx + 4, ry + 4))
         if cell in CHALLENGE_SQUARES:
             colour = TIC_TAC_TOE_COL if CHALLENGE_SQUARES[cell] == "tic_tac_toe" else REACTION_COL
             pygame.draw.circle(surface, colour, (rx + CELL_SIZE - 12, ry + CELL_SIZE - 12), 8)
-            pygame.draw.circle(surface, GRID_COL, (rx + CELL_SIZE - 12, ry + CELL_SIZE - 12), 8, 1)
+            pygame.draw.circle(surface, GRID_LINE_COL, (rx + CELL_SIZE - 12, ry + CELL_SIZE - 12), 8, 1)
 
     # Grid lines on top
     for i in range(GRID_SIZE + 1):
-        pygame.draw.line(surface, GRID_COL,
+        pygame.draw.line(surface, GRID_LINE_COL,
                          (MARGIN, MARGIN + i * CELL_SIZE),
                          (MARGIN + BOARD_SIZE, MARGIN + i * CELL_SIZE), 1)
-        pygame.draw.line(surface, GRID_COL,
+        pygame.draw.line(surface, GRID_LINE_COL,
                          (MARGIN + i * CELL_SIZE, MARGIN),
                          (MARGIN + i * CELL_SIZE, MARGIN + BOARD_SIZE), 1)
 

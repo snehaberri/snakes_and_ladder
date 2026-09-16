@@ -18,7 +18,14 @@ FPS = 60
 
 # ── Colours ──────────────────────────────────────────────────────────────
 BACKGROUND  = (16, 75, 30)
-GRID_COL    = (60, 60, 60)
+GRID_COL    = [
+    "#ec2029",
+    "#0976bb",
+    "#0f954a",
+    "#fff5d2",
+    "#d7e02c"]
+GRID_LINE_COL = (60, 60, 60)
+MINIGAME_CELL_COL = "#fff5d2"
 CELL_LIGHT  = (240, 240, 214)
 CELL_DARK   = (206, 204, 168)
 SNAKE_COL   = (200, 60, 60)
