@@ -1,38 +1,68 @@
 # Snakes & Ladders — Adaptive RL
 
-A Snakes and Ladders game where the board reconfigures in real-time.
-A trained RL agent repositions snakes and ladders after every turn
-to maximise game tension — keeping the player engaged, never making
-it feel impossible.
+A classic Snakes & Ladders game with a twist: the board isn't fixed. A trained
+reinforcement-learning agent repositions snakes and ladders in real time as
+you play, aiming to keep every game tense and winnable — never a runaway
+lucky streak, never an unwinnable slog.
 
 ---
 
-## Project Structure
+## How it works
+
+Instead of a static board, an RL "director" watches the game every few turns
+and decides whether to leave the board alone or move a snake or ladder closer
+to (or further from) the player. It's trained offline with Q-learning, then
+loaded at play time to make live decisions.
+
+- **State:** player position (bucketed) + board changes remaining + agent goal
+- **Action space:** `wait`, `ladder_near`, `snake_near`, `ladder_away`, `snake_away`
+- **Reward:** shaped by turn-by-turn progress, with a bonus for steering the
+  game toward a target length and a penalty for games that run too long
+- **Algorithm:** tabular Q-learning with ε-greedy exploration, no external ML
+  dependencies
+
+The agent is capped at a small number of board changes per game and only
+acts at fixed intervals, so the board stays recognizable as Snakes & Ladders
+rather than constantly reshuffling under you.
+
+---
+
+## Minigames
+
+A few tiles hand control to a minigame instead of a plain dice resolution:
+
+| Tile(s) | Minigame        | Type          |
+|---------|------------------|---------------|
+| 10, 70  | Tic-tac-toe vs. a bot | Skill-based   |
+| 30, 85  | Reaction-time click   | Mixed         |
+| 50      | Coin flip             | Pure chance   |
+
+Win → move 2 steps forward. Lose → move 1 step back.
+
+---
+
+## Project structure
 
 ```
-snakes-rl/
-├── backend/
-│   ├── game/
-│   │   ├── board.py        # Board state + snake/ladder repositioning
-│   │   ├── state.py        # Player state, minigame types/results
-│   │   └── engine.py       # Turn logic, dice rolls, minigame resolution
-│   ├── rl/
-│   │   ├── environment.py  # Gymnasium env — used for training
-│   │   ├── configs.py      # Pre-defined board layouts (agent's action space)
-│   │   ├── train.py        # Q-learning training loop (10k episodes)
-│   │   ├── agent.py        # Loads Q-table, picks config during live games
-│   │   └── q_table.npy     # Saved after training (git-ignored)
-│   ├── api/
-│   │   └── routes.py       # FastAPI endpoints
-│   └── main.py             # App entry point
-├── frontend/
-│   └── src/
-│       ├── components/     # Board, Dice, MiniGame components
-│       └── pages/          # Game page
-├── notebooks/
-│   └── explore.ipynb       # Training analysis + reward curves
-└── requirements.txt
+snakes_and_ladder/
+├── main.py            # Entry point — run a game
+├── board.py            # Board state and snake/ladder resolution
+├── constants.py         # Snake/ladder positions, challenge squares
+├── dice.py              # Dice roll logic
+├── ladder.py             # Ladder-specific movement logic
+├── rl_director.py        # The Q-learning agent: state encoding, action
+│                          # selection, board edits, training update rule
+├── train_rl.py           # Runs simulated episodes to train the director
+├── ai_simulator.py        # Simulates/evaluates agent behavior across games
+├── assets/               # Game assets
+├── data/                 # Saved Q-table + decision-log database (git-ignored)
+└── mini_games/            # Minigame implementations
 ```
+
+> This reflects the current state of the repo. An earlier version of this
+> README described a `backend/`/`frontend`/`notebooks` layout with a FastAPI
+> API and web frontend — that's the direction the project is heading in, not
+> what's implemented yet. See [Roadmap](#roadmap).
 
 ---
 
@@ -42,66 +72,51 @@ snakes-rl/
 pip install -r requirements.txt
 ```
 
-## Step 1 — Train the agent
+### 1. Train the agent
 
 ```bash
-python -m backend.rl.train --episodes 10000
+python train_rl.py
 ```
 
-Saves `q_table.npy` to `backend/rl/`. Takes ~30 seconds.
+This runs a batch of simulated episodes and saves the learned Q-table to
+`data/`. See `train_rl.py` for configurable options (episode count, target
+goal, etc.).
 
-## Step 2 — Run the API
-
-```bash
-uvicorn backend.main:app --reload
-```
-
-API available at `http://localhost:8000`
-Swagger docs at `http://localhost:8000/docs`
-
-## Step 3 — Run the frontend
+### 2. Play
 
 ```bash
-cd frontend
-npm install
-npm run dev
+python main.py
 ```
 
 ---
 
-## API Reference
+## RL details
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/game/new` | Start a new game |
-| POST | `/game/{id}/roll` | Roll dice + agent adapts board |
-| POST | `/game/{id}/minigame` | Submit minigame result (`win`/`loss`) |
-| GET | `/game/{id}/state` | Get current game state |
-| DELETE | `/game/{id}` | End session |
+| | |
+|---|---|
+| State encoding | `f"{cell // 10}:{changes_left}:{goal}"` |
+| Actions | 5 discrete actions (see above) |
+| Max board changes per game | 3 |
+| Decision interval | every 4 turns |
+| Max turns per episode | 120 |
+| Learning rate (α) | 0.12 |
+| Discount factor (γ) | 0.96 |
 
----
-
-## How the RL works
-
-The agent trains on the `SnakesLaddersEnv` Gymnasium environment.
-
-- **State:** `(player_position, win_rate_bucket)` — 101 × 5 = 505 states
-- **Action:** pick one of 6 pre-defined board configurations
-- **Reward:** +1 per turn alive, +5 bonus for finishing near 30 turns, -2 for games exceeding 60 turns
-- **Algorithm:** Q-learning with ε-greedy exploration
-
-After training, the Q-table is a `(101, 5, 6)` array. During a live game,
-the agent looks up `Q[position][win_bucket]` and picks the config with
-the highest value — repositioning the board before each roll.
+Every director decision — goal, turn number, player position, action taken,
+and a human-readable description — is logged to a SQLite database in `data/`
+alongside the saved Q-table, so live games can be audited after the fact.
 
 ---
 
-## Minigames
+## Roadmap
 
-| Tile(s) | Type | Mechanic |
-|---------|------|----------|
-| 10, 70 | Tic-tac-toe | Play against a bot — skill-based |
-| 30, 85 | Reaction time | Click within a window — mixed |
-| 50 | Chance | Coin flip — pure random |
+- [ ] FastAPI backend exposing game/RL endpoints for a live web client
+- [ ] Web frontend (board, dice, minigame UI)
+- [ ] Training notebook with reward curves and evaluation plots
+- [ ] Baseline comparison: RL-directed games vs. a static board
 
-Win → 2 steps forward. Loss → 1 step back.
+---
+
+## License
+
+No license specified yet.
