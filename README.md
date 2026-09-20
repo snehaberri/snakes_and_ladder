@@ -1,4 +1,7 @@
 <img width="673" height="509" alt="Screenshot 2026-09-20 at 10 27 35 PM" src="https://github.com/user-attachments/assets/1b201af6-7f8c-4bcd-af9c-1f77a3f6cb71" />
+
+
+
 # Snakes & Ladders — Adaptive RL
 
 A classic Snakes & Ladders game with a twist: the board isn't fixed. A trained
